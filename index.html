@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Olivia Markow's Interactive Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Jersey+10&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #9ed6ff; /* sky */
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    #overlay {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      /* transform: translateX(-50%); */
+      background: rgba(255,255,255,0.9);
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="overlay"></div>
+
+  <script>
+    /* =====================
+       Canvas setup
+    ====================== */
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const groundY = canvas.height - 100;
+
+    /* =====================
+       Input
+    ====================== */
+    const keys = {};
+
+    window.addEventListener("keydown", e => {
+      keys[e.key] = true;
+      if (e.key === " ") jumpToNextExperience();
+    });
+
+    window.addEventListener("keyup", e => {
+      keys[e.key] = false;
+    });
+
+    window.addEventListener("keydown", e => {
+        keys[e.key] = true;
+
+        if (e.key === "d" || e.key === "ArrowRight") {
+            if (gameState === "title") {
+                gameState = "play";
+            } else {
+                jumpToNextExperience();
+            }
+        }
+        });
+
+
+    /* =====================
+       Rabbit
+    ====================== */
+    const rabbit = {
+      x: 100,
+      y: groundY,
+      vx: 0,
+      vy: 0,
+      speed: 15,
+      jumping: false,
+      width: 50,
+      height: 50
+    };
+
+    const gravity = 0.6;
+
+    function updateRabbit() {
+      if (keys["a"] || keys["ArrowLeft"]) rabbit.vx = -rabbit.speed;
+      else if (keys["d"] || keys["ArrowRight"]) rabbit.vx = rabbit.speed;
+      else rabbit.vx = 0;
+
+      if ((keys["w"] || keys["ArrowUp"]) && !rabbit.jumping) {
+        rabbit.vy = -15;
+        rabbit.jumping = true;
+      }
+
+      rabbit.vy += gravity;
+      rabbit.x += rabbit.vx;
+      rabbit.y += rabbit.vy;
+
+      if (rabbit.y >= groundY) {
+        rabbit.y = groundY;
+        rabbit.vy = 0;
+        rabbit.jumping = false;
+      }
+    }
+
+    /* =====================
+       Experiences
+    ====================== */
+    const overlay = document.getElementById("overlay");
+
+    const title = {x: 500, title: "Olivia Markow's Interactive Portfolio", shown: true}
+
+    const experiences = [
+      { x: 500, title: "Internship", text: "Software Engineering Internship", shown: false },
+      { x: 1100, title: "Research", text: "CS Research + PRISM", shown: false },
+      { x: 1700, title: "Art", text: "Digital & Traditional Art", shown: false },
+      { x: 2300, title: "Music", text: "Composition & Production", shown: false }
+    ];
+
+    let currentExperienceIndex = 0;
+    let gameState = "title";
+    let titleTime = 0;
+
+    function checkExperiences() {
+      experiences.forEach(exp => {
+        if (!exp.shown && Math.abs(rabbit.x - exp.x) < 40) {
+          showExperience(exp);
+          exp.shown = true;
+          currentExperienceIndex++;
+        }
+      });
+    }
+
+    function showExperience(exp) {
+      overlay.innerHTML = `<strong>${exp.title}</strong><br>${exp.text}`;
+      overlay.style.display = "block";
+      setTimeout(() => overlay.style.display = "none", 2500);
+    }
+
+    function jumpToNextExperience() {
+      if (currentExperienceIndex >= experiences.length) return;
+      const target = experiences[currentExperienceIndex];
+      rabbit.x = target.x - 20;
+      rabbit.vy = -10;
+      showExperience(target);
+      target.shown = true;
+      currentExperienceIndex++;
+    }
+
+    /* =====================
+       Camera
+    ====================== */
+    function worldToScreen(x) {
+      return x - rabbit.x + canvas.width / 3;
+    }
+
+    /* =====================
+       Drawing
+    ====================== */
+    function drawSky() {
+      ctx.fillStyle = "#87ceeb";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGrass() {
+      ctx.fillStyle = "#3cb043";
+      ctx.fillRect(0, groundY + rabbit.height / 2, canvas.width, 100);
+    }
+
+    function drawRabbit() {
+        let idleOffset = 0;
+        if (gameState === "title") {
+            idleOffset = Math.sin(titleTime * 3) * 20;
+        }
+
+        ctx.fillStyle = "white";
+        ctx.fillRect(
+            canvas.width / 3,
+            rabbit.y - rabbit.height + idleOffset,
+            rabbit.width,
+            rabbit.height
+        );
+    }
+
+
+    function drawExperiences() {
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "100px 'Jersey 10'";
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowBlur = 4;
+
+        experiences.forEach(exp => {
+            if (exp.shown) {
+            ctx.fillText(
+                exp.title,
+                worldToScreen(exp.x),
+                120
+            );
+            }
+        });
+        }
+
+    function drawTitleScreen() {
+        drawSky();
+        drawGrass();
+        drawRabbit();
+
+        const bounce = Math.sin(titleTime) * 12; // bounce amount
+
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowBlur = 6;
+
+        ctx.font = "150px 'Jersey 10'";
+        ctx.fillText(
+            "OLIVIA MARKOW's",
+            canvas.width / 2,
+            canvas.height / 2 - 120 + bounce
+        );
+
+        ctx.font = "100px 'Jersey 10'";
+        ctx.fillText(
+            "INTERACTIVE PORTFOLIO",
+            canvas.width / 2,
+            canvas.height / 2 - 10 + bounce
+        );
+
+        ctx.font = "50px 'Jersey 10'";
+        ctx.fillText(
+            "Hold D or → to run",
+            canvas.width / 2,
+            canvas.height / 2 + 160
+        );
+
+        ctx.shadowBlur = 0;
+    }
+
+
+
+    /* =====================
+       Loop
+    ====================== */
+    function update() {
+      updateRabbit();
+      checkExperiences();
+    }
+
+    function draw() {
+      drawSky();
+      drawExperiences();
+      drawGrass();
+      drawRabbit();
+    }
+
+    function loop() {
+        titleTime += 0.02;
+
+        if (gameState === "title") {
+            drawTitleScreen();
+        } else {
+            update();
+            draw();
+        }
+        requestAnimationFrame(loop);
+        }
+
+
+    loop();
+  </script>
+</body>
+</html>
