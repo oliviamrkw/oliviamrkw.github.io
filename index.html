@@ -1,286 +1,716 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Olivia Markow's Interactive Portfolio</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Olivia Markow's Interactive Portfolio</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Jersey+10&display=swap" rel="stylesheet">
-  
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #9ed6ff; /* sky */
-      font-family: monospace;
-    }
-    canvas {
-      display: block;
-      image-rendering: pixelated;
-    }
 
-    #overlay {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      /* transform: translateX(-50%); */
-      background: rgba(255,255,255,0.9);
-      padding: 12px 20px;
-      border-radius: 8px;
-      display: none;
-    }
-  </style>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #88b9dc;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+</style>
 </head>
+
 <body>
-  <canvas id="game"></canvas>
-  <div id="overlay"></div>
+<canvas id="game"></canvas>
 
-  <script>
-    /* =====================
-       Canvas setup
-    ====================== */
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
+<script>
+/* =====================
+   Canvas
+===================== */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+const groundY = canvas.height - 120;
+
+/* =====================
+   State
+===================== */
+let titleTime = 0;
+let walkTime = 0;
+
+/* =====================
+   Input
+===================== */
+const keys = {};
+
+window.addEventListener("keydown", e => {
+  keys[e.key] = true;
+});
+
+window.addEventListener("keyup", e => {
+  keys[e.key] = false;
+});
+
+/* =====================
+   Rabbit
+===================== */
+const rabbit = {
+  x: 100,
+  y: groundY,
+  vx: 0,
+  vy: 0,
+  speed: 11,
+  jumping: false,
+  width: 50,
+  height: 50
+};
+
+const gravity = 0.7;
+
+function updateRabbit() {
+  rabbit.vx = 0;
+
+  if (keys["a"] || keys["ArrowLeft"]) rabbit.vx = -rabbit.speed;
+  if (keys["d"] || keys["ArrowRight"]) rabbit.vx = rabbit.speed;
+
+  if ((keys["w"] || keys["ArrowUp"]) && !rabbit.jumping) {
+    rabbit.vy = -20; 
+    rabbit.jumping = true;
+  }
+
+  rabbit.vy += gravity;
+  rabbit.x += rabbit.vx;
+  rabbit.y += rabbit.vy;
+
+  if (rabbit.y >= groundY) {
+    rabbit.y = groundY;
+    rabbit.vy = 0;
+    rabbit.jumping = false;
+  }
+
+  if (rabbit.vx !== 0) walkTime += 0.2;
+}
+
+/* =====================
+   Sections & Experiences
+===================== */
+const sections = [
+  {
+    x: 800,
+    title: "EXPERIENCE",
+    color: "#5f71e3",
+    skyColor: "#c9edf2",
+    skyType: "day",
+    grassColor: "#7cb85c",
+    grassDetailColor: "#43702b"
+  },
+  {
+    x: 2200,
+    title: "PROJECTS",
+    color: "#ff8b3d",
+    skyColor: "#f7c072",
+    skyType: "sunset",
+    grassColor: "#a4b85c",
+    grassDetailColor: "#6c7d2e"
+  },
+  {
+    x: 3600,
+    title: "CREATIVE WORK",
+    color: "#8119ff",
+    skyColor: "#1f1f36",
+    skyType: "night",
+    grassColor: "#284f43",
+    grassDetailColor: "#133027"
+  }
+];
+
+
+const experiences = [
+  // EXPERIENCE section
+  {
+    x: 1100,
+    title: "Software Developer",
+    subtitle: "UofTNest\nJanuary 2026 - April 2026",
+    description:
+      "- Developing an image-based computer vision system for detecting marine plastic waste\n- Training object detection models using transfer learning with YOLO and PyTorch/TensorFlow",
+    image: true,
+    shown: true,
+    opacity: 0,
+    slideY: -50,
+    section: 0
+  },
+  {
+    x: 1700,
+    title: "Research Assistant",
+    subtitle: "University of Toronto\nMay 2025 - August 2025",
+    description:
+      "Conducted CS research through PRISM, focusing on experimentation and problem-solving.",
+    image: true,
+    shown: true,
+    opacity: 0,
+    slideY: -50,
+    section: 0
+  },
+  {
+    x: 2300,
+    title: "Office Administrator",
+    subtitle: "Tax SOS Inc.\nJune 2023 - August 2023",
+    description:
+      "- Automated administrative workflows with Python scripts, improving efficiency by 25\n- Created invoices and performed bank reconciliations in QuickBooks, applying strong attention to detail",
+    image: true,
+    shown: true,
+    opacity: 0,
+    slideY: -50,
+    section: 0
+  },
+  {
+    x: 3100,
+    title: "Coding Tutor",
+    subtitle: "Ultimate Coders\nJuly 2023 - August 2023",
+    description:
+      "- Designed lessons and taught JavaScript to summer camp students",
+    image: true,
+    shown: true,
+    opacity: 0,
+    slideY: -50,
+    section: 0
+  },
+  // PROJECTS section
+  {
+    x: 4400, //3900+500
+    title: "Forensics Training Software",
+    subtitle: "Python, Ren'Py",
+    description:
+      "- Co-developed educational forensic investigation training software used by 100+ University of Toronto students\n- Designed and scripted 12 scenarios simulating real-world forensic procedures\n- Created custom character art and UI assets using Photoshop to improve engagement",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 1
+  },
+  {
+    x: 5200,
+    title: "Personal Finance Tracking App",
+    subtitle: "Java",
+    description:
+      "- Designed and built an AI-assisted budgeting tool that analyzes bank statements, categorizes expenses, and delivers financial insights, in collaboration with a developer team of 6\n- Utilized Clean Architecture and modern software development workflows",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 1
+  },
+  {
+    x: 6000,
+    title: "Emotion Recognizer",
+    subtitle: "Python",
+    description:
+      "- Developed and trained a machine learning model for real-time emotion recognition using OpenCV and MediaPipe\n- Implemented computer vision, facial landmark extraction, temporal smoothing, and integrated an adaptive speech agent",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 1
+  }
+  // HACKATHON section
+  {
+    x: 7300, //6800+500
+    title: "UoftHacks",
+    subtitle: "Python",
+    description:
+      "- Trained a computer vision–based guitar chord recognition machine learning model\n- Implemented real-time audio pitch detection via frequency analysis to recognize notes played through a guitar",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 2
+  },
+  {
+    x: 8100,
+    title: "Animation",
+    subtitle: "Motion Graphics",
+    description:
+      "Designed animated sequences and motion graphics for various creative projects.",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 2
+  }
+  // CREATIVE WORK section
+  {
+    x: 9400, //8900+500
+    title: "Illustration",
+    subtitle: "Digital & Traditional",
+    description:
+      "Explored visual storytelling through illustration, pixel art, and mixed media.",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 2
+  },
+  {
+    x: 4500,
+    title: "Animation",
+    subtitle: "Motion Graphics",
+    description:
+      "Designed animated sequences and motion graphics for various creative projects.",
+    image: true,
+    shown: false,
+    opacity: 0,
+    slideY: -50,
+    section: 2
+  }
+];
+
+function checkExperiences() {
+  experiences.forEach(exp => {
+    if (!exp.shown && Math.abs(rabbit.x - exp.x) < 120) {
+      exp.shown = true;
     }
-    window.addEventListener("resize", resize);
-    resize();
+    
+    // Animate experiences fading in and sliding upward
+    if (exp.shown) {
+      if (exp.opacity < 1) exp.opacity += 0.015;
+      if (exp.slideY < 0) exp.slideY += 1.5;
+    }
+  });
+}
 
-    const groundY = canvas.height - 100;
+/* =====================
+   Camera
+===================== */
+function worldToScreen(x) {
+  return x - rabbit.x + canvas.width / 3;
+}
 
-    /* =====================
-       Input
-    ====================== */
-    const keys = {};
+/* =====================
+   Sky Color Management
+===================== */
+function getCurrentSkyType() {
+  // Default to day
+  let skyType = "day";
+  
+  // Find which section we're in
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
+    const nextSection = sections[i + 1];
+    
+    const sectionStart = section.x - 300;
+    const sectionEnd = nextSection ? nextSection.x - 300 : section.x + 2000;
+    
+    if (rabbit.x >= sectionStart) {
+      skyType = section.skyType;
+    }
+  }
+  
+  return skyType;
+}
 
-    window.addEventListener("keydown", e => {
-      keys[e.key] = true;
-      if (e.key === " ") jumpToNextExperience();
-    });
+function getCurrentSkyColor() {
+  // Default starting sky color
+  let currentColor = "#87ceeb";
+  
+  // Find which section we're closest to
+  let closestSection = null;
+  let nextSection = null;
+  
+  for (let i = 0; i < sections.length; i++) {
+    if (rabbit.x >= sections[i].x - 300) {
+      closestSection = sections[i];
+      nextSection = sections[i + 1] || null;
+    }
+  }
+  
+  if (!closestSection) {
+    // Before first section
+    return currentColor;
+  }
+  
+  // Check if we're transitioning to next section
+  if (nextSection && rabbit.x >= nextSection.x - 300 && rabbit.x < nextSection.x) {
+    const transitionStart = nextSection.x - 300;
+    const transitionEnd = nextSection.x;
+    const progress = Math.pow(
+      (rabbit.x - transitionStart) / (transitionEnd - transitionStart),
+      0.8
+    );
+    currentColor = blendColors(closestSection.skyColor, nextSection.skyColor, progress);
+  } else {
+    // In a section, use its color
+    currentColor = closestSection.skyColor;
+  }
+  
+  return currentColor;
+}
 
-    window.addEventListener("keyup", e => {
-      keys[e.key] = false;
-    });
+function blendColors(color1, color2, t) {
+  // Clamp t between 0 and 1
+  t = Math.max(0, Math.min(1, t));
+  
+  const c1 = hexToRgb(color1);
+  const c2 = hexToRgb(color2);
+  
+  const r = Math.round(c1.r + (c2.r - c1.r) * t);
+  const g = Math.round(c1.g + (c2.g - c1.g) * t);
+  const b = Math.round(c1.b + (c2.b - c1.b) * t);
+  
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
-    window.addEventListener("keydown", e => {
-        keys[e.key] = true;
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 135, g: 206, b: 235 };
+}
 
-        if (e.key === "d" || e.key === "ArrowRight") {
-            if (gameState === "title") {
-                gameState = "play";
-            } else {
-                jumpToNextExperience();
-            }
-        }
-        });
+/* =====================
+   Parallax Background Elements - Pixel Art Style
+===================== */
+function drawBackgroundAnimations() {
+  const skyType = getCurrentSkyType();
+  
+  if (skyType === "day") {
+    drawPixelDayClouds();
+  } else if (skyType === "sunset") {
+    drawPixelSunsetClouds();
+  } else if (skyType === "night") {
+    drawPixelStars();
+  }
+}
 
+function drawPixelDayClouds() {
+  const cloudOffset = rabbit.x * 0.15;
+  
+  for (let i = 0; i < 8; i++) {
+    const x = Math.floor(worldToScreen(i * 500 + cloudOffset));
+    const y = Math.floor(60 + Math.sin(i * 1.5) * 30);
+    
+    if (x > -150 && x < canvas.width + 150) {
+      drawPixelCloud(x, y, 40, 'white');
+    }
+  }
+}
 
-    /* =====================
-       Rabbit
-    ====================== */
-    const rabbit = {
-      x: 100,
-      y: groundY,
-      vx: 0,
-      vy: 0,
-      speed: 15,
-      jumping: false,
-      width: 50,
-      height: 50
-    };
+function drawPixelSunsetClouds() {
+  const cloudOffset = rabbit.x * 0.15;
+  
+  for (let i = 0; i < 8; i++) {
+    const x = Math.floor(worldToScreen(i * 500 + cloudOffset));
+    const y = Math.floor(80 + Math.sin(i * 1.5) * 40);
+    
+    if (x > -150 && x < canvas.width + 150) {
+      drawPixelCloud(x, y, 50, '#ff8c50');
+    }
+  }
+  
+  // Darker layer
+  for (let i = 0; i < 5; i++) {
+    const x = Math.floor(worldToScreen(i * 600 + cloudOffset + 300));
+    const y = Math.floor(120 + Math.sin(i * 2) * 30);
+    
+    if (x > -150 && x < canvas.width + 150) {
+      drawPixelCloud(x, y, 55, '#ff6432');
+    }
+  }
+}
 
-    const gravity = 0.6;
+function drawPixelCloud(x, y, size, color) {
+  ctx.fillStyle = color;
+  
+  // Simple pixel cloud shape - blocky and stylized
+  const pixelSize = 8;
+  
+  // Main cloud body
+  ctx.fillRect(x + pixelSize, y, pixelSize * 5, pixelSize);
+  ctx.fillRect(x, y + pixelSize, pixelSize * 7, pixelSize);
+  ctx.fillRect(x, y + pixelSize * 2, pixelSize * 7, pixelSize);
+  ctx.fillRect(x + pixelSize, y + pixelSize * 3, pixelSize * 5, pixelSize);
+}
 
-    function updateRabbit() {
-      if (keys["a"] || keys["ArrowLeft"]) rabbit.vx = -rabbit.speed;
-      else if (keys["d"] || keys["ArrowRight"]) rabbit.vx = rabbit.speed;
-      else rabbit.vx = 0;
-
-      if ((keys["w"] || keys["ArrowUp"]) && !rabbit.jumping) {
-        rabbit.vy = -15;
-        rabbit.jumping = true;
+function drawPixelStars() {
+  const starOffset = rabbit.x * 0.05;
+  
+  for (let i = 0; i < 40; i++) {
+    const x = Math.floor(worldToScreen(i * 200 + (i * 37) % 150 + starOffset));
+    const y = Math.floor(50 + (i * 73) % 250);
+    
+    if (x > -50 && x < canvas.width + 50) {
+      // Twinkling effect
+      const twinkle = Math.sin(titleTime * 3 + i) * 0.3 + 0.7;
+      ctx.globalAlpha = twinkle;
+      
+      // Pixel star - simple cross shape
+      ctx.fillStyle = "white";
+      const size = (i % 5 === 0) ? 3 : 2;
+      
+      // Cross pattern
+      ctx.fillRect(x - size, y, size * 2 + 1, 1);
+      ctx.fillRect(x, y - size, 1, size * 2 + 1);
+      
+      // Add sparkle to some stars
+      if (i % 7 === 0) {
+        ctx.fillRect(x - 1, y - 1, 1, 1);
+        ctx.fillRect(x + 1, y - 1, 1, 1);
+        ctx.fillRect(x - 1, y + 1, 1, 1);
+        ctx.fillRect(x + 1, y + 1, 1, 1);
       }
-
-      rabbit.vy += gravity;
-      rabbit.x += rabbit.vx;
-      rabbit.y += rabbit.vy;
-
-      if (rabbit.y >= groundY) {
-        rabbit.y = groundY;
-        rabbit.vy = 0;
-        rabbit.jumping = false;
-      }
     }
+  }
+  
+  ctx.globalAlpha = 1;
+}
 
-    /* =====================
-       Experiences
-    ====================== */
-    const overlay = document.getElementById("overlay");
-
-    const title = {x: 500, title: "Olivia Markow's Interactive Portfolio", shown: true}
-
-    const experiences = [
-      { x: 500, title: "Internship", text: "Software Engineering Internship", shown: false },
-      { x: 1100, title: "Research", text: "CS Research + PRISM", shown: false },
-      { x: 1700, title: "Art", text: "Digital & Traditional Art", shown: false },
-      { x: 2300, title: "Music", text: "Composition & Production", shown: false }
-    ];
-
-    let currentExperienceIndex = 0;
-    let gameState = "title";
-    let titleTime = 0;
-
-    function checkExperiences() {
-      experiences.forEach(exp => {
-        if (!exp.shown && Math.abs(rabbit.x - exp.x) < 40) {
-          showExperience(exp);
-          exp.shown = true;
-          currentExperienceIndex++;
-        }
-      });
+function drawGrassDetails() {
+  ctx.fillStyle = "#253d27";
+  
+  // Draw grass tufts that scroll with the world
+  for (let i = 0; i < 50; i++) {
+    const x = worldToScreen(i * 150);
+    const y = groundY + rabbit.height / 2;
+    
+    if (x > -50 && x < canvas.width + 50) {
+      // Grass tuft
+      ctx.fillRect(x - 2, y, 4, 15);
+      ctx.fillRect(x - 8, y + 5, 4, 12);
+      ctx.fillRect(x + 4, y + 3, 4, 14);
     }
+  }
+}
 
-    function showExperience(exp) {
-      overlay.innerHTML = `<strong>${exp.title}</strong><br>${exp.text}`;
-      overlay.style.display = "block";
-      setTimeout(() => overlay.style.display = "none", 2500);
+/* =====================
+   Drawing
+===================== */
+function drawSky() {
+  ctx.fillStyle = getCurrentSkyColor();
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawGrass() {
+  ctx.fillStyle = "#70b85c";
+  ctx.fillRect(0, groundY + rabbit.height / 2, canvas.width, 200);
+}
+
+function drawRabbit() {
+  let bounce = 0;
+
+  // bounce
+  if (rabbit.vx !== 0) {
+    bounce += Math.sin(walkTime) * 6;
+  } else {
+    bounce = Math.sin(titleTime * 3) * 8;
+  }
+
+  ctx.save();
+
+  // Position rabbit at ground level
+  ctx.translate(canvas.width / 3, rabbit.y + bounce);
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(
+    -rabbit.width / 2,
+    -rabbit.height,
+    rabbit.width,
+    rabbit.height
+  );
+
+  // Simple ear
+  ctx.fillRect(-rabbit.width / 4, -rabbit.height * 1.3, 8, 20);
+  ctx.fillRect(rabbit.width / 4 - 8, -rabbit.height * 1.3, 8, 20);
+
+  ctx.restore();
+}
+
+function drawTitle() {
+  const titleWorldX = 100;
+  const screenX = worldToScreen(titleWorldX);
+  
+  // Only draw if on screen
+  if (screenX < -400 || screenX > canvas.width + 400) return;
+
+  const bounce = Math.sin(titleTime * 2) * 12;
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "white";
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = 6;
+
+  ctx.font = "150px 'Jersey 10', sans-serif";
+  ctx.fillText(
+    "OLIVIA MARKOW",
+    screenX,
+    canvas.height / 2 - 120 + bounce
+  );
+
+  ctx.font = "100px 'Jersey 10', sans-serif";
+  ctx.fillText(
+    "INTERACTIVE PORTFOLIO",
+    screenX,
+    canvas.height / 2 - 10 + bounce
+  );
+
+  ctx.font = "50px 'Jersey 10', sans-serif";
+  ctx.fillText(
+    "Use WASD or Arrow Keys",
+    screenX,
+    canvas.height / 2 + 160
+  );
+
+  ctx.shadowBlur = 0;
+}
+
+function drawSectionHeaders() {
+  sections.forEach(section => {
+    const screenX = worldToScreen(section.x);
+    
+    // Only draw if on screen
+    if (screenX < -400 || screenX > canvas.width + 400) return;
+
+    const bounce = Math.sin(titleTime * 2) * 8;
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = section.color;
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "rgba(0,0,0,0.3)";
+    ctx.shadowBlur = 6;
+
+    ctx.font = "120px 'Jersey 10', sans-serif";
+    ctx.strokeText(section.title, screenX, 200 + bounce);
+    ctx.fillText(section.title, screenX, 200 + bounce);
+
+    ctx.shadowBlur = 0;
+  });
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line + words[i] + " ";
+    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+      ctx.fillText(line, x, y);
+      line = words[i] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
     }
+  }
+  ctx.fillText(line, x, y);
+}
 
-    function jumpToNextExperience() {
-      if (currentExperienceIndex >= experiences.length) return;
-      const target = experiences[currentExperienceIndex];
-      rabbit.x = target.x - 20;
-      rabbit.vy = -10;
-      showExperience(target);
-      target.shown = true;
-      currentExperienceIndex++;
-    }
+function drawExperience(exp) {
+  // Don't draw if not triggered yet
+  if (exp.opacity <= 0) return;
+  
+  const screenX = worldToScreen(exp.x);
+  if (screenX < -500 || screenX > canvas.width + 200) return;
 
-    /* =====================
-       Camera
-    ====================== */
-    function worldToScreen(x) {
-      return x - rabbit.x + canvas.width / 3;
-    }
+  // Position higher up on screen
+  const boxX = screenX - 300;
+  const boxY = 150 - exp.slideY;
+  const boxWidth = 600;
+  const boxHeight = 400;
 
-    /* =====================
-       Drawing
-    ====================== */
-    function drawSky() {
-      ctx.fillStyle = "#87ceeb";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+  ctx.save();
+  ctx.globalAlpha = exp.opacity;
+  
+  // Left side - Title
+  ctx.textAlign = "left";
+  ctx.font = "60px 'Jersey 10', sans-serif";
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 3;
+  ctx.strokeText(exp.title, boxX + 20, boxY + 60);
+  ctx.fillText(exp.title, boxX + 20, boxY + 60);
+  
+  ctx.font = "32px 'Jersey 10', sans-serif";
+  ctx.fillStyle = "white";
+  ctx.fillText(exp.subtitle, boxX + 20, boxY + 95);
+  
+  // Left side - Image placeholder
+  if (exp.image) {
+    const imgX = boxX + 20;
+    const imgY = boxY + 130;
+    const imgWidth = 240;
+    const imgHeight = 240;
+    
+    ctx.fillStyle = "#e0e0e0";
+    ctx.fillRect(imgX, imgY, imgWidth, imgHeight);
+    ctx.strokeStyle = "#999";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(imgX, imgY, imgWidth, imgHeight);
+    
+    ctx.fillStyle = "#999";
+    ctx.font = "20px 'Bebas Neue', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Image", imgX + imgWidth / 2, imgY + imgHeight / 2);
+  }
+  
+  // Middle separator line
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(boxX + 290, boxY + 20);
+  ctx.lineTo(boxX + 290, boxY + boxHeight - 20);
+  ctx.stroke();
+  
+  // Right side - Description
+  ctx.textAlign = "left";
+  ctx.font = "24px 'Bebas Neue', sans-serif";
+  ctx.fillStyle = "black";
+  wrapText(exp.description, boxX + 310, boxY + 50, 260, 30);
+  
+  ctx.restore();
+}
 
-    function drawGrass() {
-      ctx.fillStyle = "#3cb043";
-      ctx.fillRect(0, groundY + rabbit.height / 2, canvas.width, 100);
-    }
+function drawExperiences() {
+  experiences.forEach(exp => {
+    drawExperience(exp);
+  });
+}
 
-    function drawRabbit() {
-        let idleOffset = 0;
-        if (gameState === "title") {
-            idleOffset = Math.sin(titleTime * 3) * 20;
-        }
+/* =====================
+   Loop
+===================== */
+function update() {
+  updateRabbit();
+  checkExperiences();
+}
 
-        ctx.fillStyle = "white";
-        ctx.fillRect(
-            canvas.width / 3,
-            rabbit.y - rabbit.height + idleOffset,
-            rabbit.width,
-            rabbit.height
-        );
-    }
+function draw() {
+  drawSky();
+  drawBackgroundAnimations();
+  drawTitle();
+  drawSectionHeaders();
+  drawExperiences();
+  drawGrass();
+  drawGrassDetails();
+  drawRabbit();
+}
 
+function loop() {
+  titleTime += 0.02;
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
 
-    function drawExperiences() {
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "100px 'Jersey 10'";
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
-        ctx.shadowBlur = 4;
-
-        experiences.forEach(exp => {
-            if (exp.shown) {
-            ctx.fillText(
-                exp.title,
-                worldToScreen(exp.x),
-                120
-            );
-            }
-        });
-        }
-
-    function drawTitleScreen() {
-        drawSky();
-        drawGrass();
-        drawRabbit();
-
-        const bounce = Math.sin(titleTime) * 12; // bounce amount
-
-        ctx.fillStyle = "#ffffff";
-        ctx.textAlign = "center";
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
-        ctx.shadowBlur = 6;
-
-        ctx.font = "150px 'Jersey 10'";
-        ctx.fillText(
-            "OLIVIA MARKOW's",
-            canvas.width / 2,
-            canvas.height / 2 - 120 + bounce
-        );
-
-        ctx.font = "100px 'Jersey 10'";
-        ctx.fillText(
-            "INTERACTIVE PORTFOLIO",
-            canvas.width / 2,
-            canvas.height / 2 - 10 + bounce
-        );
-
-        ctx.font = "50px 'Jersey 10'";
-        ctx.fillText(
-            "Hold D or → to run",
-            canvas.width / 2,
-            canvas.height / 2 + 160
-        );
-
-        ctx.shadowBlur = 0;
-    }
-
-
-
-    /* =====================
-       Loop
-    ====================== */
-    function update() {
-      updateRabbit();
-      checkExperiences();
-    }
-
-    function draw() {
-      drawSky();
-      drawExperiences();
-      drawGrass();
-      drawRabbit();
-    }
-
-    function loop() {
-        titleTime += 0.02;
-
-        if (gameState === "title") {
-            drawTitleScreen();
-        } else {
-            update();
-            draw();
-        }
-        requestAnimationFrame(loop);
-        }
-
-
-    loop();
-  </script>
+loop();
+</script>
 </body>
 </html>
