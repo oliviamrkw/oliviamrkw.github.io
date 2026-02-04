@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Olivia Markow's Interactive Portfolio</title>
 
+<!-- External font links for custom typography used throughout the portfolio -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Jersey+10&display=swap" rel="stylesheet">
 
 <style>
+  /* Basic page styling - removes margins and makes canvas fill the screen */
   body {
     margin: 0;
     overflow: hidden;
@@ -19,39 +21,194 @@
     display: block;
     image-rendering: pixelated;
   }
+  
+  /* Menu styles for the navigation dropdown */
+  .menu-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+  }
+  
+  .menu-button {
+    width: 75px;
+    height: 75px;
+    background: white;
+    border: 4px solid black;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.2s;
+  }
+  
+  .menu-button:hover {
+    background: #f0f0f0;
+  }
+  
+  .menu-dot {
+    width: 50px;
+    height: 6px;
+    background: black;
+    border-radius: 0%;
+  }
+  
+  .dropdown-menu {
+    position: absolute;
+    top: 90px;
+    left: 0;
+    background: white;
+    border: 4px solid black;
+    border-radius: 12px;
+    padding: 25px;
+    min-width: 400px;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+    display: none;
+  }
+  
+  .dropdown-menu.active {
+    display: block;
+  }
+  
+  .menu-section {
+    margin-bottom: 30px;
+  }
+  
+  .menu-section:last-child {
+    margin-bottom: 0;
+  }
+  
+  .menu-section-title {
+    font-family: 'Jersey 10', sans-serif;
+    font-size: 30px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #ddd;
+  }
+  
+  .menu-link {
+    display: block;
+    font-family: 'Jersey 10', sans-serif;
+    font-size: 24px;
+    color: #333;
+    text-decoration: none;
+    padding: 8px 0;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  
+  .menu-link:hover {
+    color: #5f71e3;
+  }
 </style>
 </head>
 
 <body>
+<!-- Navigation menu container with hamburger button and dropdown -->
+<div class="menu-container">
+  <div class="menu-button" onclick="toggleMenu()">
+    <div class="menu-dot"></div>
+    <div class="menu-dot"></div>
+    <div class="menu-dot"></div>
+  </div>
+  
+  <div class="dropdown-menu" id="dropdownMenu">
+    <!-- Links section for external resources -->
+    <div class="menu-section">
+      <div class="menu-section-title">LINKS</div>
+      <a href="YOUR_RESUME_LINK" target="_blank" class="menu-link">Resume</a>
+      <a href="YOUR_LINKEDIN_LINK" target="_blank" class="menu-link">LinkedIn</a>
+      <a href="YOUR_GITHUB_LINK" target="_blank" class="menu-link">GitHub</a>
+      <a href="YOUR_DRIVE_LINK" target="_blank" class="menu-link">Art Portfolio</a>
+    </div>
+    
+    <!-- Navigation section to jump to different portfolio sections -->
+    <div class="menu-section">
+      <div class="menu-section-title">JUMP TO</div>
+      <a onclick="jumpToSection(0)" class="menu-link">Experience</a>
+      <a onclick="jumpToSection(1)" class="menu-link">Projects</a>
+      <a onclick="jumpToSection(2)" class="menu-link">Creative Work</a>
+    </div>
+    
+    <!-- Contact section -->
+    <div class="menu-section">
+      <div class="menu-section-title">CONTACT</div>
+      <a href="mailto:your.email@example.com" class="menu-link">Email Me</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main game canvas where the entire portfolio is rendered -->
 <canvas id="game"></canvas>
 
 <script>
 /* =====================
-   Canvas
+   Menu Functions
+   Handles the navigation dropdown menu functionality
+===================== */
+// Toggle the visibility of the dropdown menu
+function toggleMenu() {
+  const menu = document.getElementById('dropdownMenu');
+  menu.classList.toggle('active');
+}
+
+// Close menu when clicking outside of it
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('dropdownMenu');
+  const button = document.querySelector('.menu-button');
+  
+  if (!menu.contains(e.target) && !button.contains(e.target)) {
+    menu.classList.remove('active');
+  }
+});
+
+// Jump to a specific portfolio section by moving the rabbit character
+function jumpToSection(sectionIndex) {
+  if (sectionIndex >= 0 && sectionIndex < sections.length) {
+    rabbit.x = sections[sectionIndex].x - 500; // Position rabbit 500 units before the section
+  }
+  document.getElementById('dropdownMenu').classList.remove('active'); // Close menu after jumping
+}
+
+/* =====================
+   Canvas Setup
+   Initializes the canvas and handles window resizing
 ===================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+let groundY = 0; // Y position of the ground level
+
+// Resize canvas to fill the window and update ground position
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  groundY = canvas.height - 120; // Ground is 120 pixels from bottom
 }
+
 window.addEventListener("resize", resize);
-resize();
-
-const groundY = canvas.height - 120;
+resize(); // Initial resize call
 
 /* =====================
-   State
+   Game State Variables
+   Tracks animation time and other global state
 ===================== */
-let titleTime = 0;
-let walkTime = 0;
+let titleTime = 0; // Time counter for title animations
+let walkTime = 0; // Time counter for rabbit walking animation
+
+const LEFT_BOUNDARY = -1000; // Left movement boundary to prevent going too far left
 
 /* =====================
-   Input
+   Input Handling
+   Manages keyboard input for player controls
 ===================== */
-const keys = {};
+const keys = {}; // Object to track pressed keys
 
+// Event listeners for key presses and releases
 window.addEventListener("keydown", e => {
   keys[e.key] = true;
 });
@@ -61,60 +218,72 @@ window.addEventListener("keyup", e => {
 });
 
 /* =====================
-   Rabbit
+   Player Character (Rabbit)
+   Defines the player character with position, velocity, and controls
 ===================== */
 const rabbit = {
-  x: 100,
-  y: groundY,
-  vx: 0,
-  vy: 0,
-  speed: 11,
-  jumping: false,
-  width: 50,
-  height: 50
+  x: 100, // Starting horizontal position
+  y: groundY, // Vertical position (on ground)
+  vx: 0, // Horizontal velocity
+  vy: 0, // Vertical velocity
+  speed: 11, // Movement speed
+  jumping: false, // Jump state
+  width: 50, // Character width
+  height: 50 // Character height
 };
 
-const gravity = 0.7;
+const gravity = 0.7; // Gravity acceleration
 
+// Update rabbit position, handle movement and jumping
 function updateRabbit() {
-  rabbit.vx = 0;
+  rabbit.vx = 0; // Reset horizontal velocity
 
+  // Handle left/right movement
   if (keys["a"] || keys["ArrowLeft"]) rabbit.vx = -rabbit.speed;
   if (keys["d"] || keys["ArrowRight"]) rabbit.vx = rabbit.speed;
 
+  // Handle jumping
   if ((keys["w"] || keys["ArrowUp"]) && !rabbit.jumping) {
-    rabbit.vy = -20; 
+    rabbit.vy = -20; // Initial jump velocity
     rabbit.jumping = true;
   }
 
+  // Apply gravity and update position
   rabbit.vy += gravity;
   rabbit.x += rabbit.vx;
   rabbit.y += rabbit.vy;
 
+  // Left boundary check
+  if (rabbit.x < LEFT_BOUNDARY) {
+    rabbit.x = LEFT_BOUNDARY;
+  }
+
+  // Handle landing on ground
   if (rabbit.y >= groundY) {
     rabbit.y = groundY;
     rabbit.vy = 0;
     rabbit.jumping = false;
   }
 
+  // Update walk animation time
   if (rabbit.vx !== 0) walkTime += 0.2;
 }
 
 /* =====================
-   Sections & Experiences
+   World Sections
+   Defines the different themed sections of the portfolio world
 ===================== */
+// Array of section objects with visual themes and colors
 const sections = [
   {
-    x: 800,
-    title: "EXPERIENCE",
-    color: "#5f71e3",
-    skyColor: "#c9edf2",
-    skyType: "day",
-    grassColor: "#7cb85c",
-    grassDetailColor: "#43702b"
+    title: "EXPERIENCE", // Section name displayed as header
+    color: "#5f71e3", // Title color
+    skyColor: "#c9edf2", // Background sky color
+    skyType: "day", // Sky animation type (clouds/stars)
+    grassColor: "#7cb85c", // Ground grass color
+    grassDetailColor: "#43702b" // Grass detail color
   },
   {
-    x: 2200,
     title: "PROJECTS",
     color: "#ff8b3d",
     skyColor: "#f7c072",
@@ -123,7 +292,6 @@ const sections = [
     grassDetailColor: "#6c7d2e"
   },
   {
-    x: 3600,
     title: "CREATIVE WORK",
     color: "#8119ff",
     skyColor: "#1f1f36",
@@ -133,179 +301,180 @@ const sections = [
   }
 ];
 
-
-const experiences = [
-  // EXPERIENCE section
+/* =====================
+   Experience Data
+   Raw data for all portfolio experiences/projects
+===================== */
+const experienceData = [
+  // EXPERIENCE section entries
   {
-    x: 1100,
     title: "Software Developer",
     subtitle: "UofTNest\nJanuary 2026 - April 2026",
     description:
       "- Developing an image-based computer vision system for detecting marine plastic waste\n- Training object detection models using transfer learning with YOLO and PyTorch/TensorFlow",
-    image: true,
-    shown: true,
-    opacity: 0,
-    slideY: -50,
-    section: 0
+    section: 0 // Which section this belongs to (0=EXPERIENCE, 1=PROJECTS, 2=CREATIVE WORK)
   },
   {
-    x: 1700,
     title: "Research Assistant",
     subtitle: "University of Toronto\nMay 2025 - August 2025",
     description:
-      "Conducted CS research through PRISM, focusing on experimentation and problem-solving.",
-    image: true,
-    shown: true,
-    opacity: 0,
-    slideY: -50,
+      "- Supervised by professors Dr. Steve Engels and Dr. Vivienne Luk\n- Collaborated with a developer team of 12 to design and implement forensics training software\n- Led UI/UX development, ensuring engaging and accessible training experiences\n- Presented technical outcomes to Peel Regional Police and academic stakeholders",
     section: 0
   },
   {
-    x: 2300,
     title: "Office Administrator",
     subtitle: "Tax SOS Inc.\nJune 2023 - August 2023",
     description:
-      "- Automated administrative workflows with Python scripts, improving efficiency by 25\n- Created invoices and performed bank reconciliations in QuickBooks, applying strong attention to detail",
-    image: true,
-    shown: true,
-    opacity: 0,
-    slideY: -50,
+      "- Automated administrative workflows with Python scripts, improving efficiency by 25%\n- Created invoices and performed bank reconciliations in QuickBooks, applying strong attention to detail",
     section: 0
   },
   {
-    x: 3100,
     title: "Coding Tutor",
     subtitle: "Ultimate Coders\nJuly 2023 - August 2023",
     description:
       "- Designed lessons and taught JavaScript to summer camp students",
-    image: true,
-    shown: true,
-    opacity: 0,
-    slideY: -50,
     section: 0
   },
-  // PROJECTS section
+
+  // PROJECTS section entries
   {
-    x: 4400, //3900+500
     title: "Forensics Training Software",
     subtitle: "Python, Ren'Py",
     description:
       "- Co-developed educational forensic investigation training software used by 100+ University of Toronto students\n- Designed and scripted 12 scenarios simulating real-world forensic procedures\n- Created custom character art and UI assets using Photoshop to improve engagement",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 1
   },
   {
-    x: 5200,
     title: "Personal Finance Tracking App",
     subtitle: "Java",
     description:
       "- Designed and built an AI-assisted budgeting tool that analyzes bank statements, categorizes expenses, and delivers financial insights, in collaboration with a developer team of 6\n- Utilized Clean Architecture and modern software development workflows",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 1
   },
   {
-    x: 6000,
     title: "Emotion Recognizer",
     subtitle: "Python",
     description:
       "- Developed and trained a machine learning model for real-time emotion recognition using OpenCV and MediaPipe\n- Implemented computer vision, facial landmark extraction, temporal smoothing, and integrated an adaptive speech agent",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 1
-  }
-  // HACKATHON section
+  },
+  // CREATIVE WORK section entries
   {
-    x: 7300, //6800+500
     title: "UoftHacks",
     subtitle: "Python",
     description:
       "- Trained a computer vision–based guitar chord recognition machine learning model\n- Implemented real-time audio pitch detection via frequency analysis to recognize notes played through a guitar",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 2
   },
   {
-    x: 8100,
-    title: "Animation",
-    subtitle: "Motion Graphics",
-    description:
-      "Designed animated sequences and motion graphics for various creative projects.",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
-    section: 2
-  }
-  // CREATIVE WORK section
-  {
-    x: 9400, //8900+500
     title: "Illustration",
     subtitle: "Digital & Traditional",
     description:
       "Explored visual storytelling through illustration, pixel art, and mixed media.",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 2
   },
   {
-    x: 4500,
     title: "Animation",
     subtitle: "Motion Graphics",
     description:
       "Designed animated sequences and motion graphics for various creative projects.",
-    image: true,
-    shown: false,
-    opacity: 0,
-    slideY: -50,
     section: 2
   }
 ];
 
+/* =====================
+   Dynamic Positioning
+   Calculates section and experience positions based on spacing rules
+===================== */
+// Set starting position for first section
+sections[0].x = 1600;
+
+// Initialize empty experiences array that will be populated with positioned experiences
+const experiences = [];
+
+// Process each section and its experiences
+sections.forEach((section, sectionIndex) => {
+  // Filter experiences for this section
+  const sectionExperiences = experienceData.filter(
+    e => e.section === sectionIndex
+  );
+
+  let previousExpX = 0; // Track position of previous experience in this section
+  sectionExperiences.forEach((exp, i) => {
+    let expX;
+    // First experience is 1000 units after section title
+    if (i === 0) {
+      expX = section.x + 700;
+    } else {
+      // Subsequent experiences are 900 units after previous
+      expX = previousExpX + 900;
+    }
+    previousExpX = expX;
+
+    // Add experience to array with calculated position and animation properties
+    experiences.push({
+      ...exp, // Copy all properties from data
+      x: expX, // Calculated world position
+      image: true, // Whether to show image placeholder
+      shown: false, // Whether experience has been triggered
+      opacity: 0, // Current opacity for fade-in animation
+      slideY: -50 // Current Y offset for slide-up animation
+    });
+  });
+
+  // Set position for next section (1000 units after last experience)
+  if (sectionIndex < sections.length - 1) {
+    sections[sectionIndex + 1].x = previousExpX + 1000;
+  }
+});
+
+/* =====================
+   Experience Management
+   Handles triggering and animating experience displays
+===================== */
 function checkExperiences() {
   experiences.forEach(exp => {
-    if (!exp.shown && Math.abs(rabbit.x - exp.x) < 120) {
+    // Ensure default values for animation properties
+    exp.shown = exp.shown !== undefined ? exp.shown : false;
+    exp.opacity = exp.opacity !== undefined ? exp.opacity : 0;
+    exp.slideY = exp.slideY !== undefined ? exp.slideY : -50;
+    
+    // Trigger showing when rabbit is 1000 units before the experience
+    if (!exp.shown && rabbit.x > exp.x - 1200) {
       exp.shown = true;
     }
-    
+
     // Animate experiences fading in and sliding upward
     if (exp.shown) {
-      if (exp.opacity < 1) exp.opacity += 0.015;
-      if (exp.slideY < 0) exp.slideY += 1.5;
+      if (exp.opacity < 1) exp.opacity += 0.015; // Fade in
+      if (exp.slideY < 0) exp.slideY += 1.5; // Slide up
     }
   });
 }
 
 /* =====================
-   Camera
+   Camera System
+   Converts world coordinates to screen coordinates
 ===================== */
 function worldToScreen(x) {
+  // Center the view on the rabbit with some offset for cinematic feel
   return x - rabbit.x + canvas.width / 3;
 }
 
 /* =====================
-   Sky Color Management
+   Sky and Environment Management
+   Handles dynamic sky colors and transitions based on sections
 ===================== */
 function getCurrentSkyType() {
-  // Default to day
+  // Default sky type if not in any section
   let skyType = "day";
   
-  // Find which section we're in
+  // Find which section the rabbit is currently in
   for (let i = 0; i < sections.length; i++) {
     const section = sections[i];
     const nextSection = sections[i + 1];
     
+    // Check if rabbit is within this section's bounds
     const sectionStart = section.x - 300;
     const sectionEnd = nextSection ? nextSection.x - 300 : section.x + 2000;
     
@@ -318,8 +487,18 @@ function getCurrentSkyType() {
 }
 
 function getCurrentSkyColor() {
-  // Default starting sky color
+  // Default sky color before first section
   let currentColor = "#87ceeb";
+  
+  // Smooth transition from start to first section
+  if (rabbit.x < sections[0].x) {
+    const transitionStart = sections[0].x - 1200;
+    if (rabbit.x >= transitionStart) {
+      const progress = (rabbit.x - transitionStart) / 1200;
+      return blendColors("#87ceeb", sections[0].skyColor, progress);
+    }
+    return "#87ceeb";
+  }
   
   // Find which section we're closest to
   let closestSection = null;
@@ -333,18 +512,14 @@ function getCurrentSkyColor() {
   }
   
   if (!closestSection) {
-    // Before first section
     return currentColor;
   }
   
-  // Check if we're transitioning to next section
-  if (nextSection && rabbit.x >= nextSection.x - 300 && rabbit.x < nextSection.x) {
-    const transitionStart = nextSection.x - 300;
+  // Smooth transition to next section (1000px transition zone)
+  if (nextSection && rabbit.x >= nextSection.x - 1000 && rabbit.x < nextSection.x) {
+    const transitionStart = nextSection.x - 1000;
     const transitionEnd = nextSection.x;
-    const progress = Math.pow(
-      (rabbit.x - transitionStart) / (transitionEnd - transitionStart),
-      0.8
-    );
+    const progress = (rabbit.x - transitionStart) / (transitionEnd - transitionStart);
     currentColor = blendColors(closestSection.skyColor, nextSection.skyColor, progress);
   } else {
     // In a section, use its color
@@ -354,13 +529,95 @@ function getCurrentSkyColor() {
   return currentColor;
 }
 
+function getCurrentGrassColor() {
+  // Default grass color before first section
+  let grassColor = "#70b85c";
+  
+  // Smooth transition from start to first section
+  if (rabbit.x < sections[0].x) {
+    const transitionStart = sections[0].x - 1200;
+    if (rabbit.x >= transitionStart) {
+      const progress = (rabbit.x - transitionStart) / 1200;
+      return blendColors("#70b85c", sections[0].grassColor, progress);
+    }
+    return "#70b85c";
+  }
+  
+  // Find which section we're closest to
+  let closestSection = null;
+  let nextSection = null;
+  
+  for (let i = 0; i < sections.length; i++) {
+    if (rabbit.x >= sections[i].x - 300) {
+      closestSection = sections[i];
+      nextSection = sections[i + 1] || null;
+    }
+  }
+  
+  if (!closestSection) {
+    return grassColor;
+  }
+  
+  // Smooth transition between sections
+  if (nextSection && rabbit.x >= nextSection.x - 1000 && rabbit.x < nextSection.x) {
+    const transitionStart = nextSection.x - 1000;
+    const transitionEnd = nextSection.x;
+    const progress = (rabbit.x - transitionStart) / (transitionEnd - transitionStart);
+    return blendColors(closestSection.grassColor, nextSection.grassColor, progress);
+  } else {
+    return closestSection.grassColor;
+  }
+}
+
+function getCurrentGrassDetailColor() {
+  // Default grass detail color before first section
+  let grassDetailColor = "#253d27";
+  
+  // Smooth transition from start to first section
+  if (rabbit.x < sections[0].x) {
+    const transitionStart = sections[0].x - 1200;
+    if (rabbit.x >= transitionStart) {
+      const progress = (rabbit.x - transitionStart) / 1200;
+      return blendColors("#253d27", sections[0].grassDetailColor, progress);
+    }
+    return "#253d27";
+  }
+  
+  let closestSection = null;
+  let nextSection = null;
+  
+  for (let i = 0; i < sections.length; i++) {
+    if (rabbit.x >= sections[i].x - 300) {
+      closestSection = sections[i];
+      nextSection = sections[i + 1] || null;
+    }
+  }
+  
+  if (!closestSection) {
+    return grassDetailColor;
+  }
+  
+  // Transition between sections
+  if (nextSection && rabbit.x >= nextSection.x - 1000 && rabbit.x < nextSection.x) {
+    const transitionStart = nextSection.x - 1000;
+    const transitionEnd = nextSection.x;
+    const progress = (rabbit.x - transitionStart) / (transitionEnd - transitionStart);
+    return blendColors(closestSection.grassDetailColor, nextSection.grassDetailColor, progress);
+  } else {
+    return closestSection.grassDetailColor;
+  }
+}
+
+// Utility function to blend two colors for smooth transitions
 function blendColors(color1, color2, t) {
-  // Clamp t between 0 and 1
+  // Clamp blend factor between 0 and 1
   t = Math.max(0, Math.min(1, t));
   
+  // Convert hex colors to RGB
   const c1 = hexToRgb(color1);
   const c2 = hexToRgb(color2);
   
+  // Interpolate RGB values
   const r = Math.round(c1.r + (c2.r - c1.r) * t);
   const g = Math.round(c1.g + (c2.g - c1.g) * t);
   const b = Math.round(c1.b + (c2.b - c1.b) * t);
@@ -368,17 +625,19 @@ function blendColors(color1, color2, t) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// Convert hex color string to RGB object
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
     r: parseInt(result[1], 16),
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16)
-  } : { r: 135, g: 206, b: 235 };
+  } : { r: 135, g: 206, b: 235 }; // Default fallback
 }
 
 /* =====================
-   Parallax Background Elements - Pixel Art Style
+   Background Elements
+   Draws animated background features like clouds and stars
 ===================== */
 function drawBackgroundAnimations() {
   const skyType = getCurrentSkyType();
@@ -475,7 +734,7 @@ function drawPixelStars() {
 }
 
 function drawGrassDetails() {
-  ctx.fillStyle = "#253d27";
+  ctx.fillStyle = getCurrentGrassDetailColor();
   
   // Draw grass tufts that scroll with the world
   for (let i = 0; i < 50; i++) {
@@ -492,7 +751,8 @@ function drawGrassDetails() {
 }
 
 /* =====================
-   Drawing
+   Drawing Functions
+   Render all visual elements to the canvas
 ===================== */
 function drawSky() {
   ctx.fillStyle = getCurrentSkyColor();
@@ -500,14 +760,14 @@ function drawSky() {
 }
 
 function drawGrass() {
-  ctx.fillStyle = "#70b85c";
+  ctx.fillStyle = getCurrentGrassColor();
   ctx.fillRect(0, groundY + rabbit.height / 2, canvas.width, 200);
 }
 
 function drawRabbit() {
   let bounce = 0;
 
-  // bounce
+  // Add bounce animation when moving or idle
   if (rabbit.vx !== 0) {
     bounce += Math.sin(walkTime) * 6;
   } else {
@@ -516,7 +776,7 @@ function drawRabbit() {
 
   ctx.save();
 
-  // Position rabbit at ground level
+  // Position rabbit on ground with bounce animation
   ctx.translate(canvas.width / 3, rabbit.y + bounce);
 
   ctx.fillStyle = "white";
@@ -527,47 +787,61 @@ function drawRabbit() {
     rabbit.height
   );
 
-  // Simple ear
+  // Draw simple ears
   ctx.fillRect(-rabbit.width / 4, -rabbit.height * 1.3, 8, 20);
   ctx.fillRect(rabbit.width / 4 - 8, -rabbit.height * 1.3, 8, 20);
 
   ctx.restore();
 }
 
+function drawLeftBoundaryWarning() {
+  const boundaryScreenX = worldToScreen(LEFT_BOUNDARY);
+  
+  // Only show warning if rabbit is near the left boundary
+  if (boundaryScreenX > -500 && boundaryScreenX < canvas.width) {
+    ctx.textAlign = "center";
+    ctx.font = "60px 'Jersey 10', sans-serif";
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 3;
+    
+    const bounce = Math.sin(titleTime * 4) * 10;
+    
+    ctx.strokeText("OTHER WAY!", boundaryScreenX, 300 + bounce);
+    ctx.fillText("OTHER WAY!", boundaryScreenX, 300 + bounce);
+  }
+}
+
 function drawTitle() {
   const titleWorldX = 100;
   const screenX = worldToScreen(titleWorldX);
   
-  // Only draw if on screen
+  // Only draw title if visible on screen (with some buffer)
   if (screenX < -400 || screenX > canvas.width + 400) return;
 
   const bounce = Math.sin(titleTime * 2) * 12;
 
   ctx.textAlign = "center";
   ctx.fillStyle = "white";
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 4;
   ctx.shadowColor = "rgba(0,0,0,0.3)";
   ctx.shadowBlur = 6;
 
+  // Draw main title with bounce animation
   ctx.font = "150px 'Jersey 10', sans-serif";
-  ctx.fillText(
-    "OLIVIA MARKOW",
-    screenX,
-    canvas.height / 2 - 120 + bounce
-  );
+  ctx.strokeText("OLIVIA MARKOW", screenX, canvas.height / 2 - 120 + bounce);
+  ctx.fillText("OLIVIA MARKOW", screenX, canvas.height / 2 - 120 + bounce);
 
+  // Draw subtitle
   ctx.font = "100px 'Jersey 10', sans-serif";
-  ctx.fillText(
-    "INTERACTIVE PORTFOLIO",
-    screenX,
-    canvas.height / 2 - 10 + bounce
-  );
+  ctx.strokeText("INTERACTIVE PORTFOLIO", screenX, canvas.height / 2 - 10 + bounce);
+  ctx.fillText("INTERACTIVE PORTFOLIO", screenX, canvas.height / 2 - 10 + bounce);
 
+  // Draw instructions
   ctx.font = "50px 'Jersey 10', sans-serif";
-  ctx.fillText(
-    "Use WASD or Arrow Keys",
-    screenX,
-    canvas.height / 2 + 160
-  );
+  ctx.strokeText("Use WASD or Arrow Keys", screenX, canvas.height / 2 + 160);
+  ctx.fillText("Use WASD or Arrow Keys", screenX, canvas.height / 2 + 160);
 
   ctx.shadowBlur = 0;
 }
@@ -576,7 +850,7 @@ function drawSectionHeaders() {
   sections.forEach(section => {
     const screenX = worldToScreen(section.x);
     
-    // Only draw if on screen
+    // Only draw section headers if visible on screen
     if (screenX < -400 || screenX > canvas.width + 400) return;
 
     const bounce = Math.sin(titleTime * 2) * 8;
@@ -596,106 +870,276 @@ function drawSectionHeaders() {
   });
 }
 
-function wrapText(text, x, y, maxWidth, lineHeight) {
-  const words = text.split(" ");
-  let line = "";
-
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + " ";
-    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
-      ctx.fillText(line, x, y);
-      line = words[i] + " ";
-      y += lineHeight;
-    } else {
-      line = testLine;
-    }
-  }
-  ctx.fillText(line, x, y);
-}
-
 function drawExperience(exp) {
-  // Don't draw if not triggered yet
+  // Skip drawing if experience hasn't started fading in yet
   if (exp.opacity <= 0) return;
   
   const screenX = worldToScreen(exp.x);
+  // Cull experiences outside viewport for performance
   if (screenX < -500 || screenX > canvas.width + 200) return;
 
-  // Position higher up on screen
-  const boxX = screenX - 300;
+  // Position experience box on screen with slide animation - scaled 1.5x
+  const boxX = screenX - 450; // 300 * 1.5
   const boxY = 150 - exp.slideY;
-  const boxWidth = 600;
-  const boxHeight = 400;
+  const boxWidth = 900; // 600 * 1.5
+  
+  // Calculate dynamic box height based on description content
+  let descriptionHeight = 480; // 320 * 1.5 default
+  let descY = boxY + 90; // 60 * 1.5 default starting position
+  
+  // Pre-calculate description height needed
+  ctx.font = "45px 'Jersey 10', sans-serif"; // 30 * 1.5
+  const descLines = exp.description.split('\n');
+  let tempDescY = boxY + 90 + 45; // 60*1.5 + 30*1.5
+  let maxDescY = tempDescY;
+  
+  descLines.forEach(line => {
+    const words = line.split(' ');
+    let currentLine = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > 405 && currentLine) { // 270 * 1.5
+        currentLine = words[i];
+        tempDescY += 42; // 28 * 1.5
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      tempDescY += 42; // 28 * 1.5
+    }
+    
+    tempDescY += 18; // 12 * 1.5
+    maxDescY = Math.max(maxDescY, tempDescY);
+  });
+  
+  // If description needs more space, extend box and shift text up
+  const minDescriptionAreaHeight = 480; // 320 * 1.5
+  const neededHeight = maxDescY - (boxY + 90); // 60 * 1.5
+  if (neededHeight > minDescriptionAreaHeight) {
+    descriptionHeight = neededHeight;
+    descY = boxY + 90 - (neededHeight - minDescriptionAreaHeight) / 2; // Shift up and extend down
+  }
+  
+  // Pre-calculate title height and width needed
+  ctx.font = "bold 90px 'Jersey 10', sans-serif"; // 60 * 1.5
+  const titleWords = exp.title.split(' ');
+  let tempTitleY = boxY + 30 + 90; // 20*1.5 + 60*1.5
+  let maxTitleY = tempTitleY;
+  let maxTitleWidth = 0;
+  
+  let titleLine = '';
+  for (let i = 0; i < titleWords.length; i++) {
+    const testLine = titleLine + (titleLine ? ' ' : '') + titleWords[i];
+    const metrics = ctx.measureText(testLine);
+    
+    if (metrics.width > 375 && titleLine) { // 250 * 1.5
+      maxTitleWidth = Math.max(maxTitleWidth, ctx.measureText(titleLine).width);
+      titleLine = titleWords[i];
+      tempTitleY += 75; // 50 * 1.5
+    } else {
+      titleLine = testLine;
+    }
+  }
+  if (titleLine) {
+    maxTitleWidth = Math.max(maxTitleWidth, ctx.measureText(titleLine).width);
+    maxTitleY = Math.max(maxTitleY, tempTitleY);
+  }
+  
+  // Calculate layout adjustments
+  let titleAreaY = boxY + 30; // 20 * 1.5
+  let subtitleAreaY = boxY + 220; // 80 * 1.5 - default position
+  let imageAreaY = boxY + 300; // 160 * 1.5 - default position
+  let separatorX = boxX + 435; // 290*1.5 - default position
+  
+  // If title would overlap with subtitle area, shift everything up
+  const titleBottom = maxTitleY + 15; // Add some padding
+  const subtitleTop = boxY + 220; // 80 * 1.5
+  if (titleBottom > subtitleTop) {
+    const overlap = titleBottom - subtitleTop;
+    titleAreaY -= overlap;
+    subtitleAreaY -= overlap;
+    imageAreaY -= overlap;
+  }
+  
+  // If title extends too far right and would overlap with separator line, shift line right
+  const titleRightEdge = boxX + 30 + maxTitleWidth; // 20*1.5 + title width
+  const separatorLeftEdge = boxX + 435; // 290*1.5
+  if (titleRightEdge > separatorLeftEdge - 30) { // Leave 30px margin
+    separatorX = titleRightEdge + 30;
+  }
+  
+  const boxHeight = Math.max(600, imageAreaY - boxY + 300 + descriptionHeight - 480); // Adjust for shifted elements
 
   ctx.save();
   ctx.globalAlpha = exp.opacity;
   
-  // Left side - Title
+  // Define component areas - adjusted for dynamic layout
+  const titleArea = {
+    x: boxX + 30, // 20 * 1.5
+    y: titleAreaY,
+    width: 375, // 250 * 1.5
+    height: 90 // Fixed height for title only
+  };
+  
+  const subtitleArea = {
+    x: boxX + 30, // 20 * 1.5
+    y: subtitleAreaY,
+    width: 375, // 250 * 1.5
+    height: 90 // Fixed height for subtitle
+  };
+  
+  const imageArea = {
+    x: boxX + 15, // 10 * 1.5, moved more to the left
+    y: imageAreaY,
+    width: 375, // 250 * 1.5
+    height: 300 // 200 * 1.5
+  };
+  
+  const descriptionArea = {
+    x: separatorX + 30, // Position relative to separator line
+    y: descY, // Dynamic position
+    width: boxX + boxWidth - separatorX - 60, // Space between separator and right edge
+    height: descriptionHeight
+  };
+  
+  // Top left: Title area with proper text wrapping
   ctx.textAlign = "left";
-  ctx.font = "60px 'Jersey 10', sans-serif";
+  ctx.font = "bold 90px 'Jersey 10', sans-serif"; // 60 * 1.5
   ctx.fillStyle = "white";
   ctx.strokeStyle = "black";
-  ctx.lineWidth = 3;
-  ctx.strokeText(exp.title, boxX + 20, boxY + 60);
-  ctx.fillText(exp.title, boxX + 20, boxY + 60);
+  ctx.lineWidth = 3; // 2 * 1.5
   
-  ctx.font = "32px 'Jersey 10', sans-serif";
-  ctx.fillStyle = "white";
-  ctx.fillText(exp.subtitle, boxX + 20, boxY + 95);
+  // Draw title with wrapping
+  let currentTitleLine = '';
+  let currentTitleY = titleArea.y + 90; // 60 * 1.5
   
-  // Left side - Image placeholder
-  if (exp.image) {
-    const imgX = boxX + 20;
-    const imgY = boxY + 130;
-    const imgWidth = 240;
-    const imgHeight = 240;
+  for (let i = 0; i < titleWords.length; i++) {
+    const testLine = currentTitleLine + (currentTitleLine ? ' ' : '') + titleWords[i];
+    const metrics = ctx.measureText(testLine);
     
-    ctx.fillStyle = "#e0e0e0";
-    ctx.fillRect(imgX, imgY, imgWidth, imgHeight);
-    ctx.strokeStyle = "#999";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(imgX, imgY, imgWidth, imgHeight);
-    
-    ctx.fillStyle = "#999";
-    ctx.font = "20px 'Bebas Neue', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Image", imgX + imgWidth / 2, imgY + imgHeight / 2);
+    if (metrics.width > titleArea.width && currentTitleLine) {
+      // Draw current line and start new one
+      ctx.strokeText(currentTitleLine, titleArea.x, currentTitleY);
+      ctx.fillText(currentTitleLine, titleArea.x, currentTitleY);
+      currentTitleLine = titleWords[i];
+      currentTitleY += 75; // 50 * 1.5
+    } else {
+      currentTitleLine = testLine;
+    }
+  }
+  // Draw remaining title text
+  if (currentTitleLine) {
+    ctx.strokeText(currentTitleLine, titleArea.x, currentTitleY);
+    ctx.fillText(currentTitleLine, titleArea.x, currentTitleY);
   }
   
-  // Middle separator line
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 3;
+  // Subtitle area - dedicated space under title, above image
+  ctx.font = "45px 'Jersey 10', sans-serif"; // 30 * 1.5
+  ctx.lineWidth = 2; // 1 * 1.5
+  const subtitleLines = exp.subtitle.split('\n');
+  let currentSubtitleY = subtitleArea.y + 45; // 30 * 1.5
+  
+  subtitleLines.forEach((line, index) => {
+    if (currentSubtitleY + (index * 53) < subtitleArea.y + subtitleArea.height) { // 35 * 1.5
+      ctx.strokeText(line, subtitleArea.x, currentSubtitleY + (index * 53));
+      ctx.fillText(line, subtitleArea.x, currentSubtitleY + (index * 53));
+    }
+  });
+  
+  // Bottom left: Image area
+  if (exp.image) {
+    ctx.fillStyle = "#e0e0e0";
+    ctx.fillRect(imageArea.x, imageArea.y, imageArea.width, imageArea.height);
+    ctx.strokeStyle = "#999";
+    ctx.lineWidth = 3; // 2 * 1.5
+    ctx.strokeRect(imageArea.x, imageArea.y, imageArea.width, imageArea.height);
+    
+    ctx.fillStyle = "#999";
+    ctx.font = "36px 'Jersey 10', sans-serif"; // 24 * 1.5
+    ctx.textAlign = "center";
+    ctx.fillText("Image", imageArea.x + imageArea.width / 2, imageArea.y + imageArea.height / 2);
+  }
+  
+  // Middle separator line - white and positioned dynamically
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 6; // 4 * 1.5
   ctx.beginPath();
-  ctx.moveTo(boxX + 290, boxY + 20);
-  ctx.lineTo(boxX + 290, boxY + boxHeight - 20);
+  ctx.moveTo(separatorX, boxY + 60); // 40 * 1.5
+  ctx.lineTo(separatorX, boxY + boxHeight - 60); // boxHeight-40*1.5
   ctx.stroke();
   
-  // Right side - Description
+  // Right side: Description area with proper text wrapping
   ctx.textAlign = "left";
-  ctx.font = "24px 'Bebas Neue', sans-serif";
-  ctx.fillStyle = "black";
-  wrapText(exp.description, boxX + 310, boxY + 50, 260, 30);
+  ctx.font = "45px 'Jersey 10', sans-serif"; // 30 * 1.5
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 3; // 2 * 1.5
+  
+  let currentDescY = descriptionArea.y + 45; // 30 * 1.5
+  
+  descLines.forEach(line => {
+    const words = line.split(' ');
+    let currentLine = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > descriptionArea.width && currentLine) {
+        // Draw current line and start new one
+        ctx.strokeText(currentLine, descriptionArea.x, currentDescY);
+        ctx.fillText(currentLine, descriptionArea.x, currentDescY);
+        currentLine = words[i];
+        currentDescY += 42; // 28 * 1.5
+      } else {
+        currentLine = testLine;
+      }
+      
+      // Check if we've exceeded the description area height
+      if (currentDescY > descriptionArea.y + descriptionArea.height - 45) break; // 30 * 1.5
+    }
+    
+    // Draw remaining text
+    if (currentLine && currentDescY <= descriptionArea.y + descriptionArea.height - 45) {
+      ctx.strokeText(currentLine, descriptionArea.x, currentDescY);
+      ctx.fillText(currentLine, descriptionArea.x, currentDescY);
+      currentDescY += 42; // 28 * 1.5
+    }
+    
+    // Add extra space between bullet points
+    currentDescY += 18; // 12 * 1.5
+  });
   
   ctx.restore();
 }
 
 function drawExperiences() {
+  // Draw all experiences that are currently visible
   experiences.forEach(exp => {
     drawExperience(exp);
   });
 }
 
 /* =====================
-   Loop
+   Main Game Loop
+   Updates game state and renders everything
 ===================== */
 function update() {
-  updateRabbit();
-  checkExperiences();
+  updateRabbit(); // Update player character physics and movement
+  checkExperiences(); // Check for experience triggers and animations
 }
 
 function draw() {
+  // Draw all visual elements in correct order (back to front)
   drawSky();
   drawBackgroundAnimations();
   drawTitle();
+  drawLeftBoundaryWarning();
   drawSectionHeaders();
   drawExperiences();
   drawGrass();
@@ -704,12 +1148,13 @@ function draw() {
 }
 
 function loop() {
-  titleTime += 0.02;
-  update();
-  draw();
-  requestAnimationFrame(loop);
+  titleTime += 0.02; // Increment animation time
+  update(); // Update game logic
+  draw(); // Render everything
+  requestAnimationFrame(loop); // Schedule next frame
 }
 
+// Start the game loop
 loop();
 </script>
 </body>
